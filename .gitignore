@@ -1,3 +1,6 @@
 .gitignore
-server/python/.venv
 test.txt
+python/.venv
+python/.env
+server/.env
+client/.env

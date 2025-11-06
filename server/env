@@ -1,4 +1,0 @@
-PORT=8090
-MEDIA_DIR=./media
-PYTHON_REMOVER_URL=http://localhost:8000/remove_bg
-BASE_URL=http://localhost:8090

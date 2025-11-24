@@ -16,7 +16,7 @@ export default function PlannerScreen() {
   return (
     <ScrollView
       className="flex-1 bg-neo-background p-5"
-      contentContainerStyle={{ paddingBottom: 100 }}
+      contentContainerStyle={{ paddingBottom: 150 }}
     >
       <View className="flex-row justify-between items-center mb-6 mt-2">
         <Text className="text-3xl font-black text-neo-dark">Planner</Text>

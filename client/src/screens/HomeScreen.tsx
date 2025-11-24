@@ -8,7 +8,7 @@ export default function HomeScreen() {
   return (
     <ScrollView
       className="flex-1 bg-neo-background p-5"
-      contentContainerStyle={{ paddingBottom: 100 }}
+      contentContainerStyle={{ paddingBottom: 150 }}
     >
       {/* Header */}
       <View className="flex-row justify-between items-center mb-6 mt-2">

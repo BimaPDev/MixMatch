@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-  ViewStyle,
+  ActivityIndicator,
 } from "react-native";
 import {
   CameraView,
@@ -14,9 +14,10 @@ import {
   CameraCapturedPicture,
 } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
-import { RefreshCw, Zap, Check, X } from "lucide-react-native";
+import { RefreshCw, Zap, Check, X, Tag, Palette } from "lucide-react-native";
 import { NeoView } from "@/src/components/Navigation";
 import colors from "../constants/colors";
+import client from "../api/client";
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
@@ -25,8 +26,14 @@ export default function CameraScreen() {
     MediaLibrary.usePermissions();
   const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);
   const [flash, setFlash] = useState<"off" | "on">("off");
+  const [uploading, setUploading] = useState(false);
 
-  // THE FIX: Explicitly tell TypeScript this Ref holds a CameraView
+  // New state to store AI results
+  const [aiResult, setAiResult] = useState<{
+    category: string;
+    color: string;
+  } | null>(null);
+
   const cameraRef = useRef<CameraView>(null);
 
   useEffect(() => {
@@ -35,6 +42,12 @@ export default function CameraScreen() {
       if (!mediaPermission?.granted) await requestMediaPermission();
     })();
   }, []);
+
+  // Reset state when retaking photo
+  const handleRetake = () => {
+    setPhoto(null);
+    setAiResult(null);
+  };
 
   if (!permission || !mediaPermission) {
     return <View className="flex-1 bg-neo-background" />;
@@ -68,72 +81,145 @@ export default function CameraScreen() {
     if (cameraRef.current) {
       try {
         const photoData = await cameraRef.current.takePictureAsync({
-          quality: 1,
+          quality: 0.8,
           base64: true,
           exif: false,
         });
-        // photoData might be undefined if something goes wrong, check strictly
-        if (photoData) {
-          setPhoto(photoData);
-        }
+        if (photoData) setPhoto(photoData);
       } catch (error) {
         Alert.alert("Error", "Failed to take picture");
       }
     }
   };
 
-  const savePhoto = async () => {
-    if (photo) {
-      try {
-        await MediaLibrary.saveToLibraryAsync(photo.uri);
-        Alert.alert("Saved!", "Photo added to your gallery ✨");
-        setPhoto(null);
-      } catch (error) {
-        Alert.alert("Error", "Could not save photo");
-      }
+  const uploadPhoto = async () => {
+    if (!photo) return;
+
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      // @ts-ignore
+      formData.append("image", {
+        uri: photo.uri,
+        name: "upload.jpg",
+        type: "image/jpeg",
+      });
+
+      const response = await client.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      console.log("Success:", response.data);
+
+      // Instead of Alert, we set state to show UI
+      setAiResult({
+        category: response.data.category || "Unknown",
+        color: response.data.color || "Unknown",
+      });
+    } catch (error: any) {
+      console.error("Upload failed:", error);
+      Alert.alert("Upload Failed", "Could not connect to server");
+    } finally {
+      setUploading(false);
     }
   };
 
+  // --- PREVIEW MODE ---
   if (photo) {
     return (
       <View className="flex-1 bg-neo-background p-5">
         <Text className="text-3xl font-black text-neo-dark mb-4 mt-2">
-          Nice Shot!
+          {aiResult ? "Item Added!" : "Nice Shot!"}
         </Text>
 
-        <NeoView
-          color="bg-white"
-          style="flex-1 mb-6"
-          innerStyle="p-0 overflow-hidden relative"
+        <View
+          style={{
+            flex: 1,
+            marginBottom: 20,
+            borderWidth: 3,
+            borderColor: colors.dark,
+            borderRadius: 16,
+            overflow: "hidden",
+            backgroundColor: "#000",
+            position: "relative",
+          }}
         >
           <Image
             source={{ uri: photo.uri }}
-            style={{ flex: 1 }}
-            resizeMode="cover"
+            style={{
+              width: "100%",
+              height: "100%",
+              opacity: aiResult ? 0.7 : 1,
+            }}
+            resizeMode="contain"
           />
-        </NeoView>
 
-        <View className="flex-row gap-4 h-20">
-          <TouchableOpacity
-            onPress={() => setPhoto(null)}
-            className="flex-1 bg-neo-card border-2 border-neo-dark rounded-xl justify-center items-center flex-row gap-2"
-          >
-            <X size={24} color={colors.accent} strokeWidth={3} />
-            <Text className="font-black text-neo-dark">Retake</Text>
-          </TouchableOpacity>
+          {/* AI RESULT OVERLAY */}
+          {aiResult && (
+            <View className="absolute bottom-0 left-0 right-0 bg-white/90 p-4 border-t-2 border-neo-dark">
+              <View className="flex-row items-center mb-2">
+                <Tag size={20} color={colors.primary} strokeWidth={3} />
+                <Text className="ml-2 font-bold text-lg text-neo-dark capitalize">
+                  {aiResult.category}
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <Palette size={20} color={colors.accent} strokeWidth={3} />
+                <Text className="ml-2 font-bold text-lg text-neo-dark capitalize">
+                  {aiResult.color}
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
 
-          <TouchableOpacity
-            onPress={savePhoto}
-            className="flex-1 bg-neo-secondary border-2 border-neo-dark rounded-xl justify-center items-center flex-row gap-2"
-          >
-            <Check size={24} color={colors.dark} strokeWidth={3} />
-            <Text className="font-black text-neo-dark">Save</Text>
-          </TouchableOpacity>
+        {/* ACTION BUTTONS */}
+        <View className="flex-row gap-4 h-16 mb-2">
+          {!aiResult ? (
+            <>
+              <TouchableOpacity
+                onPress={handleRetake}
+                disabled={uploading}
+                className="flex-1 bg-neo-card border-2 border-neo-dark rounded-xl justify-center items-center flex-row gap-2"
+              >
+                <X size={24} color={colors.accent} strokeWidth={3} />
+                <Text className="font-black text-neo-dark">Retake</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={uploadPhoto}
+                disabled={uploading}
+                className={`flex-1 border-2 border-neo-dark rounded-xl justify-center items-center flex-row gap-2 ${
+                  uploading ? "bg-gray-300" : "bg-neo-secondary"
+                }`}
+              >
+                {uploading ? (
+                  <ActivityIndicator color={colors.dark} />
+                ) : (
+                  <Check size={24} color={colors.dark} strokeWidth={3} />
+                )}
+                <Text className="font-black text-neo-dark">
+                  {uploading ? "Analyzing..." : "Save"}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            // RESET BUTTON (Appears after success)
+            <TouchableOpacity
+              onPress={handleRetake}
+              className="flex-1 bg-neo-primary border-2 border-neo-dark rounded-xl justify-center items-center flex-row gap-2"
+            >
+              <RefreshCw size={24} color={colors.dark} strokeWidth={3} />
+              <Text className="font-black text-neo-dark">Add Another</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
   }
 
+  // --- CAMERA MODE (Unchanged) ---
   return (
     <View className="flex-1 bg-neo-background pt-5">
       <View className="flex-row justify-between items-center px-5 mb-4 z-10">
@@ -162,7 +248,6 @@ export default function CameraScreen() {
           flash={flash}
           ref={cameraRef}
         />
-
         <View className="absolute top-4 left-4 w-12 h-12 border-t-8 border-l-8 border-neo-secondary opacity-50 rounded-tl-xl" />
         <View className="absolute top-4 right-4 w-12 h-12 border-t-8 border-r-8 border-neo-secondary opacity-50 rounded-tr-xl" />
         <View className="absolute bottom-4 left-4 w-12 h-12 border-b-8 border-l-8 border-neo-secondary opacity-50 rounded-bl-xl" />

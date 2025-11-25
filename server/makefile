@@ -6,3 +6,6 @@ migrateup:
 
 migratedown:
 	migrate -path db/migration -database "postgresql://root:secret@localhost:5433/mixmatch?sslmode=disable" -verbose down
+
+gorun:
+	go run cmd/api/main.go

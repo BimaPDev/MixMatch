@@ -15,7 +15,7 @@ import {
 } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
 import { RefreshCw, Zap, Check, X, Tag, Palette } from "lucide-react-native";
-import { NeoView } from "@/src/components/Navigation";
+import NeoView from "@/src/components/Navigation";
 import colors from "../constants/colors";
 import client from "../api/client";
 
@@ -27,8 +27,6 @@ export default function CameraScreen() {
   const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);
   const [flash, setFlash] = useState<"off" | "on">("off");
   const [uploading, setUploading] = useState(false);
-
-  // New state to store AI results
   const [aiResult, setAiResult] = useState<{
     category: string;
     color: string;
@@ -43,21 +41,19 @@ export default function CameraScreen() {
     })();
   }, []);
 
-  // Reset state when retaking photo
   const handleRetake = () => {
     setPhoto(null);
     setAiResult(null);
   };
 
-  if (!permission || !mediaPermission) {
+  if (!permission || !mediaPermission)
     return <View className="flex-1 bg-neo-background" />;
-  }
 
   if (!permission.granted) {
     return (
       <View className="flex-1 bg-neo-background justify-center items-center p-5">
         <Text className="text-xl font-black text-neo-dark text-center mb-4">
-          We need your permission to show the camera
+          Camera Access Needed
         </Text>
         <TouchableOpacity
           onPress={requestPermission}
@@ -68,14 +64,6 @@ export default function CameraScreen() {
       </View>
     );
   }
-
-  const toggleCameraFacing = () => {
-    setFacing((current) => (current === "back" ? "front" : "back"));
-  };
-
-  const toggleFlash = () => {
-    setFlash((current) => (current === "off" ? "on" : "off"));
-  };
 
   const takePicture = async () => {
     if (cameraRef.current) {
@@ -94,7 +82,6 @@ export default function CameraScreen() {
 
   const uploadPhoto = async () => {
     if (!photo) return;
-
     setUploading(true);
 
     try {
@@ -110,37 +97,33 @@ export default function CameraScreen() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      console.log("Success:", response.data);
-
-      // Instead of Alert, we set state to show UI
       setAiResult({
         category: response.data.category || "Unknown",
         color: response.data.color || "Unknown",
       });
     } catch (error: any) {
-      console.error("Upload failed:", error);
       Alert.alert("Upload Failed", "Could not connect to server");
     } finally {
       setUploading(false);
     }
   };
 
-  // --- PREVIEW MODE ---
+  // Preview Mode
   if (photo) {
     return (
-      <View className="flex-1 bg-neo-background p-5">
-        <Text className="text-3xl font-black text-neo-dark mb-4 mt-2">
-          {aiResult ? "Item Added!" : "Nice Shot!"}
+      <View className="flex-1 bg-neo-background p-5 pt-12">
+        <Text className="text-3xl font-black text-neo-dark mb-4">
+          {aiResult ? "Success!" : "Nice Shot!"}
         </Text>
 
         <View
           style={{
             flex: 1,
-            marginBottom: 20,
-            borderWidth: 3,
-            borderColor: colors.dark,
             borderRadius: 16,
             overflow: "hidden",
+            borderWidth: 3,
+            borderColor: colors.dark,
+            marginBottom: 20,
             backgroundColor: "#000",
             position: "relative",
           }}
@@ -154,8 +137,6 @@ export default function CameraScreen() {
             }}
             resizeMode="contain"
           />
-
-          {/* AI RESULT OVERLAY */}
           {aiResult && (
             <View className="absolute bottom-0 left-0 right-0 bg-white/90 p-4 border-t-2 border-neo-dark">
               <View className="flex-row items-center mb-2">
@@ -174,7 +155,6 @@ export default function CameraScreen() {
           )}
         </View>
 
-        {/* ACTION BUTTONS */}
         <View className="flex-row gap-4 h-16 mb-2">
           {!aiResult ? (
             <>
@@ -186,7 +166,6 @@ export default function CameraScreen() {
                 <X size={24} color={colors.accent} strokeWidth={3} />
                 <Text className="font-black text-neo-dark">Retake</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 onPress={uploadPhoto}
                 disabled={uploading}
@@ -200,12 +179,11 @@ export default function CameraScreen() {
                   <Check size={24} color={colors.dark} strokeWidth={3} />
                 )}
                 <Text className="font-black text-neo-dark">
-                  {uploading ? "Analyzing..." : "Save"}
+                  {uploading ? "Thinking..." : "Save"}
                 </Text>
               </TouchableOpacity>
             </>
           ) : (
-            // RESET BUTTON (Appears after success)
             <TouchableOpacity
               onPress={handleRetake}
               className="flex-1 bg-neo-primary border-2 border-neo-dark rounded-xl justify-center items-center flex-row gap-2"
@@ -219,59 +197,36 @@ export default function CameraScreen() {
     );
   }
 
-  // --- CAMERA MODE (Unchanged) ---
+  // Camera View
   return (
     <View className="flex-1 bg-neo-background pt-5">
       <View className="flex-row justify-between items-center px-5 mb-4 z-10">
-        <Text className="text-3xl font-black text-neo-light absolute top-0 left-5 drop-shadow-md shadow-black">
-          Snap It!
-        </Text>
-        <View className="flex-1" />
+        <Text className="text-3xl font-black text-neo-dark">Snap It!</Text>
         <TouchableOpacity
-          onPress={toggleFlash}
+          onPress={() => setFlash((f) => (f === "off" ? "on" : "off"))}
           className={`p-3 border-2 border-neo-dark rounded-full ${
             flash === "on" ? "bg-neo-secondary" : "bg-neo-card"
           }`}
         >
-          <Zap
-            size={24}
-            color={colors.dark}
-            fill={flash === "on" ? colors.dark : "none"}
-          />
+          <Zap size={24} color={colors.dark} />
         </TouchableOpacity>
       </View>
 
-      <View className="flex-1 mt-2 mx-2 mb-2 rounded-3xl overflow-hidden border-4 border-neo-dark relative">
+      <View className="flex-1 mx-2 mb-2 rounded-3xl overflow-hidden border-4 border-neo-dark">
         <CameraView
           style={{ flex: 1 }}
           facing={facing}
           flash={flash}
           ref={cameraRef}
         />
-        <View className="absolute top-4 left-4 w-12 h-12 border-t-8 border-l-8 border-neo-secondary opacity-50 rounded-tl-xl" />
-        <View className="absolute top-4 right-4 w-12 h-12 border-t-8 border-r-8 border-neo-secondary opacity-50 rounded-tr-xl" />
-        <View className="absolute bottom-4 left-4 w-12 h-12 border-b-8 border-l-8 border-neo-secondary opacity-50 rounded-bl-xl" />
-        <View className="absolute bottom-4 right-4 w-12 h-12 border-b-8 border-r-8 border-neo-secondary opacity-50 rounded-br-xl" />
       </View>
 
-      <View className="h-32 flex-row justify-between items-center px-8 pb-8">
-        <TouchableOpacity className="w-14 h-14 justify-center items-center border-2 border-neo-dark rounded-xl bg-neo-pastelPink">
-          <View className="w-10 h-10 border border-neo-dark bg-neo-card rounded-lg" />
-        </TouchableOpacity>
-
+      <View className="h-32 flex-row justify-center items-center gap-10 pb-8">
         <TouchableOpacity
           onPress={takePicture}
           className="w-20 h-20 rounded-full border-4 border-neo-dark bg-neo-card justify-center items-center"
-          style={{ elevation: 5 }}
         >
           <View className="w-16 h-16 rounded-full bg-neo-accent border-2 border-neo-dark" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={toggleCameraFacing}
-          className="w-14 h-14 justify-center items-center border-2 border-neo-dark rounded-full bg-neo-card"
-        >
-          <RefreshCw size={24} color={colors.dark} />
         </TouchableOpacity>
       </View>
     </View>

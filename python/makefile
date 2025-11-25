@@ -1,0 +1,2 @@
+pythonrun:
+	python -m uvicorn main:app --reload --port 5001

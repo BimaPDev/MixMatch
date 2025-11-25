@@ -5,28 +5,23 @@
 package db
 
 import (
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Friendship struct {
-	UserID1 int32
-	UserID2 int32
-	Status  pgtype.Text
-}
-
 type Item struct {
-	ID        int32
-	OwnerID   int32
-	ImageUrl  string
-	Category  pgtype.Text
-	Color     pgtype.Text
-	Style     pgtype.Text
-	CreatedAt pgtype.Timestamp
+	ID         uuid.UUID          `json:"id"`
+	UserID     string             `json:"user_id"`
+	ImageUrl   string             `json:"image_url"`
+	Category   string             `json:"category"`
+	Color      string             `json:"color"`
+	Confidence float64            `json:"confidence"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
 type User struct {
-	ID        int32
-	Username  string
-	Email     string
-	CreatedAt pgtype.Timestamp
+	ID           uuid.UUID          `json:"id"`
+	Email        string             `json:"email"`
+	PasswordHash string             `json:"password_hash"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }

@@ -1,35 +1,43 @@
 package main
 
 import (
+	"context"
 	"log"
-	"os"
+	"net/http"
 
-	// Correct imports using your GitHub module path
+	// External Libraries
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	// Internal Modules
 	"github.com/BimaPDev/MixMatch/db"
-	"github.com/BimaPDev/MixMatch/internal/api"
-	"github.com/BimaPDev/MixMatch/internal/database" // <--- This fixes "undefined: database"
+	"github.com/BimaPDev/MixMatch/internal/api" // <--- Imports the file we created in Step 1
+	"github.com/BimaPDev/MixMatch/internal/handlers"
 )
 
 func main() {
-	// 1. Connect to DB
-	conn := database.Connect()
-	defer conn.Close(nil)
+	// 1. Connect to Postgres (Port 5433)
+	dbSource := "postgresql://root:secret@localhost:5433/mixmatch?sslmode=disable"
 
-	// 2. Create the Store (sqlc)
-	store := db.New(conn)
-
-	// 3. Create the Server (Inject the store)
-	server := api.NewServer(store)
-
-	// 4. Start the Server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Starting server on port %s", port)
-	err := server.Start(":" + port)
+	pool, err := pgxpool.New(context.Background(), dbSource)
 	if err != nil {
-		log.Fatal("Cannot start server:", err)
+		log.Fatal("Unable to connect to database:", err)
+	}
+	defer pool.Close()
+	log.Println("Connected to PostgreSQL on port 5433!")
+
+	// 2. Setup Database Store
+	store := db.New(pool)
+
+	// 3. Setup Handlers
+	h := handlers.NewHandler(store)
+
+	// 4. Setup Router
+	// We call the function from the "api" package we imported
+	r := api.NewRouter(h)
+
+	// 5. Start Server
+	log.Println("Server running on port 8080")
+	if err := http.ListenAndServe(":8080", r); err != nil {
+		log.Fatal(err)
 	}
 }

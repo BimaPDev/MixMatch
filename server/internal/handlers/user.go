@@ -1,55 +1,43 @@
 package handlers
 
 import (
-	"context"
+	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/BimaPDev/MixMatch/db"
-	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
-type createUserRequest struct {
-	Username string `json:"username" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
+type CreateUserRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
-// CreateUser handles POST /users
-func (h *Handler) CreateUser(ctx *gin.Context) {
-	var req createUserRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	var req CreateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	arg := db.CreateUserParams{
-		Username: req.Username,
-		Email:    req.Email,
-	}
-
-	user, err := h.store.CreateUser(context.Background(), arg)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, user)
-}
+	user, err := h.queries.CreateUser(r.Context(), db.CreateUserParams{
+		ID:           uuid.New(), // Use uuid.New() for Postgres
+		Email:        req.Email,
+		PasswordHash: string(hashedPassword),
+	})
 
-// GetUser handles GET /users/:id
-func (h *Handler) GetUser(ctx *gin.Context) {
-	idStr := ctx.Param("id")
-	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		http.Error(w, "Failed to create user", http.StatusConflict)
 		return
 	}
 
-	user, err := h.store.GetUser(context.Background(), int32(id))
-	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, user)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
 }

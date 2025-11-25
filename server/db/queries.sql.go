@@ -8,130 +8,42 @@ package db
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
-const createFriendship = `-- name: CreateFriendship :exec
-INSERT INTO friendships (user_id_1, user_id_2, status)
-VALUES ($1, $2, $3)
-`
-
-type CreateFriendshipParams struct {
-	UserID1 int32
-	UserID2 int32
-	Status  pgtype.Text
-}
-
-func (q *Queries) CreateFriendship(ctx context.Context, arg CreateFriendshipParams) error {
-	_, err := q.db.Exec(ctx, createFriendship, arg.UserID1, arg.UserID2, arg.Status)
-	return err
-}
-
 const createItem = `-- name: CreateItem :one
-INSERT INTO items (owner_id, image_url, category, color, style)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, owner_id, image_url, category, color, style, created_at
+INSERT INTO items (id, user_id, image_url, category, color, confidence) 
+VALUES ($1, $2, $3, $4, $5, $6) 
+RETURNING id, user_id, image_url, category, color, confidence, created_at
 `
 
 type CreateItemParams struct {
-	OwnerID  int32
-	ImageUrl string
-	Category pgtype.Text
-	Color    pgtype.Text
-	Style    pgtype.Text
+	ID         uuid.UUID `json:"id"`
+	UserID     string    `json:"user_id"`
+	ImageUrl   string    `json:"image_url"`
+	Category   string    `json:"category"`
+	Color      string    `json:"color"`
+	Confidence float64   `json:"confidence"`
 }
 
 func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, error) {
 	row := q.db.QueryRow(ctx, createItem,
-		arg.OwnerID,
+		arg.ID,
+		arg.UserID,
 		arg.ImageUrl,
 		arg.Category,
 		arg.Color,
-		arg.Style,
+		arg.Confidence,
 	)
 	var i Item
 	err := row.Scan(
 		&i.ID,
-		&i.OwnerID,
+		&i.UserID,
 		&i.ImageUrl,
 		&i.Category,
 		&i.Color,
-		&i.Style,
+		&i.Confidence,
 		&i.CreatedAt,
 	)
 	return i, err
-}
-
-const createUser = `-- name: CreateUser :one
-INSERT INTO users (username, email)
-VALUES ($1, $2)
-RETURNING id, username, email, created_at
-`
-
-type CreateUserParams struct {
-	Username string
-	Email    string
-}
-
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.Username, arg.Email)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.Email,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const getUser = `-- name: GetUser :one
-SELECT id, username, email, created_at FROM users
-WHERE id = $1 LIMIT 1
-`
-
-func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
-	row := q.db.QueryRow(ctx, getUser, id)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.Email,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const listItemsByUser = `-- name: ListItemsByUser :many
-SELECT id, owner_id, image_url, category, color, style, created_at FROM items
-WHERE owner_id = $1
-ORDER BY created_at DESC
-`
-
-func (q *Queries) ListItemsByUser(ctx context.Context, ownerID int32) ([]Item, error) {
-	rows, err := q.db.Query(ctx, listItemsByUser, ownerID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Item
-	for rows.Next() {
-		var i Item
-		if err := rows.Scan(
-			&i.ID,
-			&i.OwnerID,
-			&i.ImageUrl,
-			&i.Category,
-			&i.Color,
-			&i.Style,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }

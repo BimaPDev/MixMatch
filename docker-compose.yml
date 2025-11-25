@@ -1,34 +1,16 @@
-version: "3.9"
 services:
   postgres:
-    image: postgres:16
-    container_name: angela
+    image: postgres:16-alpine
+    container_name: simon
+    restart: always
     environment:
-      POSTGRES_DB: ${PG_DB}
-      POSTGRES_USER: ${PG_USER}
-      POSTGRES_PASSWORD: ${PG_PASS}
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=mixmatch
     ports:
-      - "${PG_PORT}:5432"
+      - '5433:5432'
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./server/migrations:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DB}"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  redis:
-    image: redis:7
-    container_name: angela-redis
-    ports:
-      - "${REDIS_PORT}:6379"
-    command: ["redis-server", "--appendonly", "yes"]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  pgdata:
+  postgres_data:

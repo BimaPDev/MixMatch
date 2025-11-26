@@ -52,9 +52,15 @@ services:
       - rabbitmq
       - postgres
     environment:
+        #RabbitMQ Stuff
       - RABBITMQ_HOST=wardrobe-broker # Connects to the container name!
       - RABBITMQ_USER=user
       - RABBITMQ_PASS=password
+        # DataBase stuff
+      - DB_HOST=Simon
+      - DB_USER=user
+      - DB_PASS=password
+      - DB_NAME=MixMatch
     volumes:
       - ./worker:/app # Live Reload: Changes in /worker folder update inside Docker
 volumes:

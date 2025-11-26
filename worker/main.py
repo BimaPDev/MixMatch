@@ -2,14 +2,28 @@ import os
 import pika
 import json
 import time
+import psycopg2
 from pika.exceptions import AMQPConnectionError
 
-# Use environment variables for configuration
-# This allows it to work on your laptop OR in Docker
+# RabbitMQ Config
 RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'localhost')
 RABBITMQ_USER = os.getenv('RABBITMQ_USER', 'user')
 RABBITMQ_PASS = os.getenv('RABBITMQ_PASS', 'password')
 QUEUE_NAME = 'image_processing_queue'
+
+# Database Config
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_USER = os.getenv('DB_USER', 'user')
+DB_PASS = os.getenv('DB_PASS', 'password')
+DB_NAME = os.getenv('DB_NAME', 'Simon')
+
+def get_db_connection():
+    return psycopg2.connect(
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASS,
+        dbname=DB_NAME
+    )
 
 def connect():
     credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
@@ -20,37 +34,59 @@ def connect():
             connection = pika.BlockingConnection(parameters)
             print(f" [*] Connected to RabbitMQ at {RABBITMQ_HOST}")
             return connection
-        except AMQPConnectionError: # <--- Use the direct name here
+        except AMQPConnectionError:
             print(" [-] RabbitMQ not ready, retrying in 5 seconds...")
             time.sleep(5)
 
 def callback(ch, method, properties, body):
     print(f" [x] Received Job: {body}")
     
-    # 1. Parse Data
-    job = json.loads(body)
-    image_id = job.get('image_id')
-    image_url = job.get('image_url')
+    try:
+        job = json.loads(body)
+        image_id = job.get('image_id')
+        
+        # 1. SIMULATE AI WORK
+        print(f" [AI] Processing {image_id}...")
+        time.sleep(2) 
+        
+        # Mock Results
+        detected_category = "t-shirt"
+        detected_color = "red"
+        confidence_score = 0.98
 
-    # 2. SIMULATE AI WORK (Replace with PyTorch/OpenCV later)
-    print(f" [AI] Processing image {image_id} from {image_url}...")
-    time.sleep(3) # Pretend to think
-    
-    # 3. Update Database (Optional: You can add Postgres logic here later)
-    # For now, we just print success
-    print(f" [AI] Finished {image_id}")
+        # 2. UPDATE DATABASE
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        query = """
+            UPDATE items 
+            SET processing_status = 'completed',
+                category = %s,
+                color = %s,
+                confidence = %s
+            WHERE id = %s
+        """
+        
+        cur.execute(query, (detected_category, detected_color, confidence_score, image_id))
+        conn.commit()
+        
+        cur.close()
+        conn.close()
+        print(f" [DB] Updated item {image_id} to 'completed'")
 
-    # 4. Acknowledge (Tell RabbitMQ we are done)
-    ch.basic_ack(delivery_tag=method.delivery_tag)
+        # 3. ACKNOWLEDGE message only after success
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        
+    except Exception as e:
+        print(f" [!] Error processing job: {e}")
+        # In a real app, we might reject the message so it retries, 
+        # but for now we just log it.
 
 if __name__ == '__main__':
     connection = connect()
     channel = connection.channel()
     
-    # Make sure queue exists
     channel.queue_declare(queue=QUEUE_NAME, durable=True)
-    
-    # Only take 1 job at a time (Quality of Service)
     channel.basic_qos(prefetch_count=1)
     
     channel.basic_consume(queue=QUEUE_NAME, on_message_callback=callback)

@@ -3,7 +3,7 @@
 //   sqlc v1.30.0
 // source: queries.sql
 
-package db
+package repository
 
 import (
 	"context"
@@ -14,12 +14,12 @@ import (
 const createItem = `-- name: CreateItem :one
 INSERT INTO items (id, user_id, image_url, category, color, confidence) 
 VALUES ($1, $2, $3, $4, $5, $6) 
-RETURNING id, user_id, image_url, category, color, confidence, created_at
+RETURNING id, user_id, image_url, category, color, confidence, processing_status, created_at
 `
 
 type CreateItemParams struct {
 	ID         uuid.UUID `json:"id"`
-	UserID     string    `json:"user_id"`
+	UserID     uuid.UUID `json:"user_id"`
 	ImageUrl   string    `json:"image_url"`
 	Category   string    `json:"category"`
 	Color      string    `json:"color"`
@@ -43,6 +43,7 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 		&i.Category,
 		&i.Color,
 		&i.Confidence,
+		&i.ProcessingStatus,
 		&i.CreatedAt,
 	)
 	return i, err

@@ -1,16 +1,62 @@
+version: '3.8'
+
 services:
+  # 1. Database (PostgreSQL)
+  # Connect via: postgres://user:password@localhost:5432/wardrobe
   postgres:
     image: postgres:16-alpine
-    container_name: simon
+    container_name: Simon
     restart: always
-    environment:
-      - POSTGRES_USER=root
-      - POSTGRES_PASSWORD=secret
-      - POSTGRES_DB=mixmatch
     ports:
-      - '5433:5432'
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=MixMatch
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  # 2. Message Broker (RabbitMQ)
+  # Connect via: amqp://user:password@localhost:5672/
+  # Dashboard: http://localhost:15672
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: wardrobe-broker
+    ports:
+      - "5672:5672"   # The port your Go/Python code connects to
+      - "15672:15672" # The Web UI port
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  # 3. Tracing (Jaeger)
+  # Dashboard: http://localhost:16686
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: wardrobe-tracer
+    ports:
+      - "16686:16686" # Frontend UI
+      - "4317:4317"   # Port to send traces to
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      
+# 4. Python AI Worker
+  worker:
+    build: 
+      context: ./worker # Looks for Dockerfile in /worker folder
+    container_name: wardrobe-ai
+    restart: always
+    depends_on:
+      - rabbitmq
+      - postgres
+    environment:
+      - RABBITMQ_HOST=wardrobe-broker # Connects to the container name!
+      - RABBITMQ_USER=user
+      - RABBITMQ_PASS=password
+    volumes:
+      - ./worker:/app # Live Reload: Changes in /worker folder update inside Docker
 volumes:
   postgres_data:
+  rabbitmq_data:

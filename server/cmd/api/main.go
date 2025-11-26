@@ -4,40 +4,74 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	// External Libraries
+	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	// Internal Modules
-	"github.com/BimaPDev/MixMatch/db"
-	"github.com/BimaPDev/MixMatch/internal/api" // <--- Imports the file we created in Step 1
-	"github.com/BimaPDev/MixMatch/internal/handlers"
+	// UPDATE THESE PATHS to match your go.mod name
+	"github.com/BimaPDev/MixMatch/internal/adapter/handler"
+	"github.com/BimaPDev/MixMatch/internal/adapter/repository"
+	"github.com/BimaPDev/MixMatch/internal/service"
+	"github.com/BimaPDev/MixMatch/queue"
 )
 
 func main() {
-	// 1. Connect to Postgres (Port 5433)
-	dbSource := "postgresql://root:secret@localhost:5433/mixmatch?sslmode=disable"
-
-	pool, err := pgxpool.New(context.Background(), dbSource)
+	// 1. Setup Database
+	dbURL := "postgres://user:password@127.0.0.1:5433/MixMatch?sslmode=disable"
+	dbPool, err := pgxpool.New(context.Background(), dbURL)
 	if err != nil {
-		log.Fatal("Unable to connect to database:", err)
+		log.Fatalf("Unable to connect to database: %v", err)
 	}
-	defer pool.Close()
-	log.Println("Connected to PostgreSQL on port 5433!")
+	defer dbPool.Close()
 
-	// 2. Setup Database Store
-	store := db.New(pool)
+	// 2. Setup RabbitMQ
+	amqpURL := "amqp://user:password@127.0.0.1:5672/"
+	mqAdapter, err := queue.NewRabbitMQAdapter(amqpURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+	defer mqAdapter.Close()
 
-	// 3. Setup Handlers
-	h := handlers.NewHandler(store)
+	// 3. Setup Core Layers (Repo -> Service -> Handler)
+	repoAdapter := repository.NewPostgresAdapter(dbPool)
+	clothingService := service.NewClothingService(repoAdapter, mqAdapter)
+	clothingHandler := handler.NewClothingHandler(clothingService)
 
 	// 4. Setup Router
-	// We call the function from the "api" package we imported
-	r := api.NewRouter(h)
+	r := gin.Default()
 
-	// 5. Start Server
-	log.Println("Server running on port 8080")
-	if err := http.ListenAndServe(":8080", r); err != nil {
-		log.Fatal(err)
+	// Routes
+	r.POST("/upload", clothingHandler.UploadItem)
+
+	// 5. Graceful Shutdown (Professional touch)
+	// This ensures requests finish before the server kills them
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: r,
 	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+
+	log.Println("Server started on :8080")
+
+	// Wait for interrupt signal (CTRL+C)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
+	}
+	log.Println("Server exiting")
 }

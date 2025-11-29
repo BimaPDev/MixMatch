@@ -43,6 +43,7 @@ func main() {
 
 	// 4. Setup Router
 	r := gin.Default()
+	r.Static("/static", "./uploads")
 
 	// Routes
 	r.POST("/upload", clothingHandler.UploadItem)

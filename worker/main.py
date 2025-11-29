@@ -39,11 +39,16 @@ def callback(ch, method, properties, body):
         image_id = job.get('image_id')
         image_url = job.get('image_url')
 
-        # 1. Use the AI Service
-        result = ai.analyze(image_url)
+        # EXTRACT FILENAME from URL
+        # URL: http://.../static/uuid.jpg  ->  Filename: uuid.jpg
+        original_filename = image_url.split('/')[-1]
+
+        # 1. Use the AI Service (Pass filename too!)
+        result = ai.analyze(image_url, original_filename)
         print(f" [AI] Result: {result}")
 
         # 2. Use the DB Service
+        # Note: You should ideally save result['processed_url'] to the DB here
         success = db.update_item_status(
             image_id, 
             result['category'], 

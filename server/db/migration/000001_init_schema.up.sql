@@ -12,6 +12,7 @@ CREATE TABLE items (
   category     VARCHAR NOT NULL DEFAULT '',
   color        VARCHAR NOT NULL DEFAULT '',
   confidence   DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+  processed_image_url VARCHAR DEFAULT '',
   
   -- This is the column sqlc was complaining about:
   processing_status VARCHAR NOT NULL DEFAULT 'pending',

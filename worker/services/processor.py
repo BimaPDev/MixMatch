@@ -1,50 +1,59 @@
+import os
 import requests
 from io import BytesIO
 from PIL import Image
+from rembg import remove
 
 class ImageProcessor:
-    def analyze(self, image_url):
+    def analyze(self, image_url, original_filename):
         print(f" [AI] Downloading from {image_url}...")
         try:
-            # 1. Download the image bytes from the URL
+            # 1. Download
             response = requests.get(image_url, timeout=10)
             response.raise_for_status()
             
-            # 2. Open image from bytes
-            img = Image.open(BytesIO(response.content))
-            img = img.resize((50, 50)) # Resize for speed
+            # 2. Open Image
+            input_image = Image.open(BytesIO(response.content))
             
-            # 3. Calculate Average Color
-            # We convert to RGB to ensure we don't have Alpha channels messing up the math
-            img = img.convert('RGB')
-            pixels = list(img.getdata())
+            # 3. Remove Background
+            print(" [AI] Removing background...")
+            output_image = remove(input_image)
             
-            r_total, g_total, b_total = 0, 0, 0
-            count = 0
+            # 4. Parse Paths
+            # URL format: http://.../static/{USER_ID}/{FILENAME}
+            # We split by '/' to find the User ID
+            url_parts = image_url.split('/')
+            user_id = url_parts[-2] 
             
-            for r, g, b in pixels:
-                r_total += r
-                g_total += g
-                b_total += b
-                count += 1
-                
-            if count > 0:
-                avg_color = (r_total // count, g_total // count, b_total // count)
-                hex_color = '#{:02x}{:02x}{:02x}'.format(*avg_color)
-            else:
-                hex_color = "#000000"
+            # Create the output filename
+            clean_name = os.path.splitext(original_filename)[0] + "-no-bg.png"
             
-            # 4. Return the Analysis Result
+            # 5. Create Directory (The Fix!)
+            # We save to /app/uploads/{user_id}/...
+            output_dir = f"/app/uploads/{user_id}"
+            os.makedirs(output_dir, exist_ok=True) # <--- Creates folder if missing
+            
+            save_path = f"{output_dir}/{clean_name}"
+            
+            # 6. Save
+            output_image.save(save_path)
+            print(f" [AI] Saved transparent image to {save_path}")
+
+            # 7. Generate the NEW URL for the Frontend
+            new_url = f"http://host.docker.internal:8080/static/{user_id}/{clean_name}"
+
             return {
                 "category": "t-shirt", 
-                "color": hex_color, 
-                "confidence": 0.99
+                "color": "#ffffff", 
+                "confidence": 0.99,
+                "processed_url": new_url
             }
             
         except Exception as e:
-            print(f" [!] Image Processing Failed: {e}")
+            print(f" [!] Processing Failed: {e}")
             return {
-                "category": "unknown", 
+                "category": "error", 
                 "color": "#000000", 
-                "confidence": 0.0
+                "confidence": 0.0,
+                "processed_url": image_url
             }

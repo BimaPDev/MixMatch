@@ -2,3 +2,5 @@ pika
 psycopg2-binary
 Pillow
 requests
+rembg
+onnxruntime

@@ -63,6 +63,7 @@ services:
       - DB_NAME=MixMatch
     volumes:
       - ./worker:/app # Live Reload: Changes in /worker folder update inside Docker
+      - ./server/uploads:/app/uploads
 volumes:
   postgres_data:
   rabbitmq_data:

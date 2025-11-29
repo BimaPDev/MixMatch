@@ -2,30 +2,23 @@ import os
 import pika
 import json
 import time
-import psycopg2
 from pika.exceptions import AMQPConnectionError
 
-# RabbitMQ Config
+# NEW IMPORTS: Importing from your services folder
+from services.database import Database
+from services.processor import ImageProcessor
+
+# Initialize Config
 RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'localhost')
 RABBITMQ_USER = os.getenv('RABBITMQ_USER', 'user')
 RABBITMQ_PASS = os.getenv('RABBITMQ_PASS', 'password')
 QUEUE_NAME = 'image_processing_queue'
 
-# Database Config
-DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_USER = os.getenv('DB_USER', 'user')
-DB_PASS = os.getenv('DB_PASS', 'password')
-DB_NAME = os.getenv('DB_NAME', 'Simon')
+# Initialize the classes
+db = Database()
+ai = ImageProcessor()
 
-def get_db_connection():
-    return psycopg2.connect(
-        host=DB_HOST,
-        user=DB_USER,
-        password=DB_PASS,
-        dbname=DB_NAME
-    )
-
-def connect():
+def connect_to_mq():
     credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
     parameters = pika.ConnectionParameters(host=RABBITMQ_HOST, port=5672, credentials=credentials)
     
@@ -44,46 +37,35 @@ def callback(ch, method, properties, body):
     try:
         job = json.loads(body)
         image_id = job.get('image_id')
-        
-        # 1. SIMULATE AI WORK
-        print(f" [AI] Processing {image_id}...")
-        time.sleep(2) 
-        
-        # Mock Results
-        detected_category = "t-shirt"
-        detected_color = "red"
-        confidence_score = 0.98
+        image_url = job.get('image_url')
 
-        # 2. UPDATE DATABASE
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
-        query = """
-            UPDATE items 
-            SET processing_status = 'completed',
-                category = %s,
-                color = %s,
-                confidence = %s
-            WHERE id = %s
-        """
-        
-        cur.execute(query, (detected_category, detected_color, confidence_score, image_id))
-        conn.commit()
-        
-        cur.close()
-        conn.close()
-        print(f" [DB] Updated item {image_id} to 'completed'")
+        # 1. Use the AI Service
+        result = ai.analyze(image_url)
+        print(f" [AI] Result: {result}")
 
-        # 3. ACKNOWLEDGE message only after success
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+        # 2. Use the DB Service
+        success = db.update_item_status(
+            image_id, 
+            result['category'], 
+            result['color'], 
+            result['confidence']
+        )
+
+        # 3. Acknowledge the message
+        if success:
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+        else:
+            # If DB failed, we still ack to prevent infinite loops in this demo.
+            # In production, you might send this to a "Dead Letter Queue".
+            print(" [!] DB Update failed")
+            ch.basic_ack(delivery_tag=method.delivery_tag)
         
     except Exception as e:
-        print(f" [!] Error processing job: {e}")
-        # In a real app, we might reject the message so it retries, 
-        # but for now we just log it.
+        print(f" [!] Critical Error: {e}")
+        ch.basic_ack(delivery_tag=method.delivery_tag)
 
 if __name__ == '__main__':
-    connection = connect()
+    connection = connect_to_mq()
     channel = connection.channel()
     
     channel.queue_declare(queue=QUEUE_NAME, durable=True)
@@ -91,5 +73,5 @@ if __name__ == '__main__':
     
     channel.basic_consume(queue=QUEUE_NAME, on_message_callback=callback)
     
-    print(' [*] Waiting for messages. To exit press CTRL+C')
+    print(' [*] Worker Started. Waiting for messages...')
     channel.start_consuming()

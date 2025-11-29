@@ -51,3 +51,8 @@ func (s *ClothingService) UploadItem(ctx context.Context, userID uuid.UUID, imag
 
 	return item, nil
 }
+
+// GetWardrobe fetches all items for a specific user
+func (s *ClothingService) GetWardrobe(ctx context.Context, userID uuid.UUID) ([]*domain.ClothingItem, error) {
+	return s.repo.ListItemsByUser(ctx, userID)
+}

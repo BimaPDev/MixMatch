@@ -1,2 +1,2 @@
 pythonrun:
-	python -m uvicorn main:app --reload --port 5001
+	docker logs -f wardrobe-ai

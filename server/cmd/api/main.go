@@ -46,6 +46,7 @@ func main() {
 
 	// Routes
 	r.POST("/upload", clothingHandler.UploadItem)
+	r.GET("/wardrobe", clothingHandler.GetWardrobe)
 
 	// 5. Graceful Shutdown (Professional touch)
 	// This ensures requests finish before the server kills them

@@ -49,3 +49,26 @@ func (h *ClothingHandler) UploadItem(c *gin.Context) {
 	// 3. Return Success
 	c.JSON(http.StatusCreated, item)
 }
+
+// GET /wardrobe?user_id=...
+func (h *ClothingHandler) GetWardrobe(c *gin.Context) {
+	userIDStr := c.Query("user_id")
+	if userIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id query parameter is required"})
+		return
+	}
+
+	uid, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id format"})
+		return
+	}
+
+	items, err := h.svc.GetWardrobe(c.Request.Context(), uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, items)
+}

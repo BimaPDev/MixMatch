@@ -10,14 +10,15 @@ import (
 )
 
 type Item struct {
-	ID               uuid.UUID          `json:"id"`
-	UserID           uuid.UUID          `json:"user_id"`
-	ImageUrl         string             `json:"image_url"`
-	Category         string             `json:"category"`
-	Color            string             `json:"color"`
-	Confidence       float64            `json:"confidence"`
-	ProcessingStatus string             `json:"processing_status"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	ID                uuid.UUID          `json:"id"`
+	UserID            uuid.UUID          `json:"user_id"`
+	ImageUrl          string             `json:"image_url"`
+	Category          string             `json:"category"`
+	Color             string             `json:"color"`
+	Confidence        float64            `json:"confidence"`
+	ProcessedImageUrl pgtype.Text        `json:"processed_image_url"`
+	ProcessingStatus  string             `json:"processing_status"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 }
 
 type User struct {

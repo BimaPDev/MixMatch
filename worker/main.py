@@ -53,7 +53,8 @@ def callback(ch, method, properties, body):
             image_id, 
             result['category'], 
             result['color'], 
-            result['confidence']
+            result['confidence'],
+            result['processed_url'] # <--- Pass this new value
         )
 
         # 3. Acknowledge the message

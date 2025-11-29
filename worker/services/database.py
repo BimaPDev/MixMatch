@@ -19,22 +19,23 @@ class Database:
             port=self.port
         )
 
-    def update_item_status(self, item_id, category, color, confidence):
+    def update_item_status(self, item_id, category, color, confidence, processed_url): # <--- Add arg
         try:
             conn = self.get_connection()
             cur = conn.cursor()
             
-            # The query updates the status so the User can see it's done
             query = """
                 UPDATE items 
                 SET processing_status = 'completed',
                     category = %s,
                     color = %s,
-                    confidence = %s
+                    confidence = %s,
+                    processed_image_url = %s  -- <--- Save the new URL
                 WHERE id = %s
             """
             
-            cur.execute(query, (category, color, confidence, item_id))
+            # Pass processed_url to the query
+            cur.execute(query, (category, color, confidence, processed_url, item_id))
             conn.commit()
             
             cur.close()

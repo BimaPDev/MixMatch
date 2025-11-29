@@ -17,7 +17,7 @@ INSERT INTO items (
 ) VALUES (
   $1, $2, $3, $4, $5
 )
-RETURNING id, user_id, image_url, category, color, confidence, processing_status, created_at
+RETURNING id, user_id, image_url, category, color, confidence, processed_image_url, processing_status, created_at
 `
 
 type CreateClothingItemParams struct {
@@ -44,6 +44,7 @@ func (q *Queries) CreateClothingItem(ctx context.Context, arg CreateClothingItem
 		&i.Category,
 		&i.Color,
 		&i.Confidence,
+		&i.ProcessedImageUrl,
 		&i.ProcessingStatus,
 		&i.CreatedAt,
 	)
@@ -51,7 +52,7 @@ func (q *Queries) CreateClothingItem(ctx context.Context, arg CreateClothingItem
 }
 
 const getClothingItem = `-- name: GetClothingItem :one
-SELECT id, user_id, image_url, category, color, confidence, processing_status, created_at FROM items
+SELECT id, user_id, image_url, category, color, confidence, processed_image_url, processing_status, created_at FROM items
 WHERE id = $1 LIMIT 1
 `
 
@@ -65,6 +66,7 @@ func (q *Queries) GetClothingItem(ctx context.Context, id uuid.UUID) (Item, erro
 		&i.Category,
 		&i.Color,
 		&i.Confidence,
+		&i.ProcessedImageUrl,
 		&i.ProcessingStatus,
 		&i.CreatedAt,
 	)
@@ -72,7 +74,7 @@ func (q *Queries) GetClothingItem(ctx context.Context, id uuid.UUID) (Item, erro
 }
 
 const listClothingByUser = `-- name: ListClothingByUser :many
-SELECT id, user_id, image_url, category, color, confidence, processing_status, created_at FROM items
+SELECT id, user_id, image_url, category, color, confidence, processed_image_url, processing_status, created_at FROM items
 WHERE user_id = $1
 ORDER BY created_at DESC
 `
@@ -93,6 +95,7 @@ func (q *Queries) ListClothingByUser(ctx context.Context, userID uuid.UUID) ([]I
 			&i.Category,
 			&i.Color,
 			&i.Confidence,
+			&i.ProcessedImageUrl,
 			&i.ProcessingStatus,
 			&i.CreatedAt,
 		); err != nil {

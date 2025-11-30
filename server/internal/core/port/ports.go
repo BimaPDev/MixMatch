@@ -3,8 +3,8 @@ package port
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/BimaPDev/MixMatch/internal/core/domain"
+	"github.com/google/uuid"
 )
 
 // RepositoryPort: Defines what the Service needs from the Database
@@ -18,4 +18,9 @@ type ClothingRepository interface {
 // QueuePort: Defines what the Service needs from RabbitMQ
 type AIQueue interface {
 	PublishImageJob(ctx context.Context, imageID uuid.UUID, imageURL string) error
+}
+
+type UserRepository interface {
+	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
 }

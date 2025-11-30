@@ -8,7 +8,10 @@ migratedown:
 	migrate -path db/migration -database "postgresql://root:secret@localhost:5433/mixmatch?sslmode=disable" -verbose down
 
 gorun:
-	go run cmd/api/main.go
+	go run ./cmd/api
 
-testuser:
+insertUser:
 	docker exec -it Simon psql -U user -d MixMatch -c "INSERT INTO users (id, email, password_hash) VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'test@example.com', 'hash');"
+
+testUser:
+	Invoke-RestMethod -Uri "http://localhost:8080/register" ` -Method Post ` -ContentType "application/json" ` -Body '{"email": "bima@example.com", "password": "securepassword123"}'

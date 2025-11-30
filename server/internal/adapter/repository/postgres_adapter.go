@@ -77,3 +77,32 @@ func (a *PostgresAdapter) GetItem(ctx context.Context, id uuid.UUID) (*domain.Cl
 		CreatedAt:        dbItem.CreatedAt.Time,
 	}, nil
 }
+
+func (a *PostgresAdapter) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {
+	params := CreateUserParams{
+		ID:           user.ID,
+		Email:        user.Email,
+		PasswordHash: user.PasswordHash,
+	}
+	dbUser, err := a.q.CreateUser(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	// Convert DB -> Domain
+	return &domain.User{
+		ID:    dbUser.ID,
+		Email: dbUser.Email,
+	}, nil
+}
+
+func (a *PostgresAdapter) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
+	dbUser, err := a.q.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	return &domain.User{
+		ID:           dbUser.ID,
+		Email:        dbUser.Email,
+		PasswordHash: dbUser.PasswordHash,
+	}, nil
+}

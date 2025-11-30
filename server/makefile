@@ -9,3 +9,6 @@ migratedown:
 
 gorun:
 	go run cmd/api/main.go
+
+testuser:
+	docker exec -it Simon psql -U user -d MixMatch -c "INSERT INTO users (id, email, password_hash) VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'test@example.com', 'hash');"

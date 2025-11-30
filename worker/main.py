@@ -4,17 +4,14 @@ import json
 import time
 from pika.exceptions import AMQPConnectionError
 
-# NEW IMPORTS: Importing from your services folder
 from services.database import Database
 from services.processor import ImageProcessor
 
-# Initialize Config
 RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'localhost')
 RABBITMQ_USER = os.getenv('RABBITMQ_USER', 'user')
 RABBITMQ_PASS = os.getenv('RABBITMQ_PASS', 'password')
 QUEUE_NAME = 'image_processing_queue'
 
-# Initialize the classes
 db = Database()
 ai = ImageProcessor()
 
@@ -38,32 +35,37 @@ def callback(ch, method, properties, body):
         job = json.loads(body)
         image_id = job.get('image_id')
         image_url = job.get('image_url')
-
-        # EXTRACT FILENAME from URL
-        # URL: http://.../static/uuid.jpg  ->  Filename: uuid.jpg
+        
+        # DEBUG LOG 1
+        print(f" [DEBUG] Step 1 - Image ID: {image_id}")
+        
         original_filename = image_url.split('/')[-1]
-
-        # 1. Use the AI Service (Pass filename too!)
+        
+        # 2. ANALYZE
         result = ai.analyze(image_url, original_filename)
-        print(f" [AI] Result: {result}")
+        
+        # DEBUG LOG 2: Check if 'processed_url' exists inside result
+        print(f" [DEBUG] Step 2 - AI Finished. Result keys: {list(result.keys())}")
+        print(f" [DEBUG] Step 2 - Processed URL value: '{result.get('processed_url')}'")
 
-        # 2. Use the DB Service
-        # Note: You should ideally save result['processed_url'] to the DB here
+        # 3. UPDATE DB
+        # We explicitly print what we are about to send to the DB
+        p_url = result.get('processed_url')
+        print(f" [DEBUG] Step 3 - Sending to DB: processed_url='{p_url}'")
+        
         success = db.update_item_status(
             image_id, 
             result['category'], 
             result['color'], 
             result['confidence'],
-            result['processed_url'] # <--- Pass this new value
+            p_url 
         )
 
-        # 3. Acknowledge the message
         if success:
+            print(" [DEBUG] Step 4 - DB Update returned True")
             ch.basic_ack(delivery_tag=method.delivery_tag)
         else:
-            # If DB failed, we still ack to prevent infinite loops in this demo.
-            # In production, you might send this to a "Dead Letter Queue".
-            print(" [!] DB Update failed")
+            print(" [DEBUG] Step 4 - DB Update returned False")
             ch.basic_ack(delivery_tag=method.delivery_tag)
         
     except Exception as e:
@@ -73,11 +75,8 @@ def callback(ch, method, properties, body):
 if __name__ == '__main__':
     connection = connect_to_mq()
     channel = connection.channel()
-    
     channel.queue_declare(queue=QUEUE_NAME, durable=True)
     channel.basic_qos(prefetch_count=1)
-    
     channel.basic_consume(queue=QUEUE_NAME, on_message_callback=callback)
-    
     print(' [*] Worker Started. Waiting for messages...')
     channel.start_consuming()

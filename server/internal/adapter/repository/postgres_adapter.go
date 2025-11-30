@@ -46,12 +46,13 @@ func (a *PostgresAdapter) ListItemsByUser(ctx context.Context, userID uuid.UUID)
 	domainItems := make([]*domain.ClothingItem, len(dbItems))
 	for i, dbItem := range dbItems {
 		domainItems[i] = &domain.ClothingItem{
-			ID:               dbItem.ID,
-			UserID:           dbItem.UserID,
-			ImageURL:         dbItem.ImageUrl,
-			Category:         dbItem.Category,
-			ProcessingStatus: dbItem.ProcessingStatus,
-			CreatedAt:        dbItem.CreatedAt.Time,
+			ID:                dbItem.ID,
+			UserID:            dbItem.UserID,
+			ImageURL:          dbItem.ImageUrl,
+			ProcessedImageURL: dbItem.ProcessedImageUrl.String,
+			Category:          dbItem.Category,
+			ProcessingStatus:  dbItem.ProcessingStatus,
+			CreatedAt:         dbItem.CreatedAt.Time,
 		}
 	}
 

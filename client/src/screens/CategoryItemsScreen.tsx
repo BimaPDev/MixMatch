@@ -1,113 +1,79 @@
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-} from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
-// Make sure this path matches where your colors file is
-import colors from "../constants/colors";
+import React, { useEffect, useState } from "react";
+import { View, Text, FlatList, Image, ActivityIndicator } from "react-native";
+import { getWardrobe } from "../api/client";
 
-const CategoryItemsScreen = () => {
-  const route = useRoute();
-  const navigation = useNavigation();
+const TEST_USER_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
 
-  // Get params passed from the Category screen (e.g., "Shirts", "Pants")
-  // Default to 'Items' if undefined to prevent crashes
-  const { categoryName } = (route.params as { categoryName: string }) || {
-    categoryName: "Category Items",
-  };
-
-  // Placeholder data - You will eventually fetch this from your Go backend
-  const dummyItems = [
-    { id: "1", name: "Blue Shirt", color: "Blue" },
-    { id: "2", name: "Red T-Shirt", color: "Red" },
-    { id: "3", name: "Denim Jacket", color: "Blue" },
-  ];
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{categoryName}</Text>
-      </View>
-
-      <FlatList
-        data={dummyItems}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card}>
-            <View style={styles.placeholderImage} />
-            <View style={styles.textContainer}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemSub}>{item.color}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-        contentContainerStyle={styles.listContent}
-      />
-    </View>
-  );
+// Helper to fix localhost IP issue on phones
+const fixUrl = (url: string) => {
+  if (!url) return undefined;
+  // Update this IP to match your computer's IP!
+  return url.replace("host.docker.internal", "192.168.1.69");
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F5F5", // Or colors.background if defined
-  },
-  header: {
-    padding: 20,
-    paddingTop: 60, // Space for status bar
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  listContent: {
-    padding: 16,
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    marginBottom: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    // Neumorphic-style shadow
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  placeholderImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: "#E0E0E0",
-    marginRight: 16,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-  },
-  itemSub: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 4,
-  },
-});
+export default function CategoryItemsScreen({ route }: any) {
+  // 1. Get the category name passed via navigation
+  const { category } = route.params || { category: "all" };
 
-export default CategoryItemsScreen;
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadItems = async () => {
+      try {
+        // Fetch everything and filter client-side (Simple for now)
+        const res = await getWardrobe(TEST_USER_ID);
+        const allItems = res.data;
+
+        // Filter by category
+        const filtered = allItems.filter(
+          (item: any) => item.category.toLowerCase() === category.toLowerCase()
+        );
+
+        setItems(filtered);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadItems();
+  }, [category]);
+
+  if (loading) return <ActivityIndicator size="large" className="mt-10" />;
+
+  return (
+    <View className="flex-1 bg-gray-50 p-4">
+      <Text className="text-2xl font-bold mb-4 text-gray-800 capitalize">
+        {category}
+      </Text>
+
+      {items.length === 0 ? (
+        <Text className="text-gray-500 italic">
+          No items found in this category.
+        </Text>
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          renderItem={({ item }) => (
+            <View className="flex-1 m-2 bg-white p-2 rounded-lg shadow-sm items-center">
+              <Image
+                source={{
+                  uri: fixUrl(item.processed_image_url || item.image_url),
+                }}
+                className="w-32 h-32 rounded-md"
+                resizeMode="contain"
+              />
+              <Text className="text-xs text-gray-400 mt-2">
+                {item.processing_status}
+              </Text>
+            </View>
+          )}
+        />
+      )}
+    </View>
+  );
+}

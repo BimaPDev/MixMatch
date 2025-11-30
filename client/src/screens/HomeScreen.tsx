@@ -1,50 +1,24 @@
 import React from "react";
-import { View, Text, StyleSheet, Button } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { View, Text, TouchableOpacity } from "react-native";
 
-const HomeScreen = () => {
-  const navigation = useNavigation();
-
+export default function HomeScreen({ navigation }: any) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Virtual Wardrobe</Text>
-      <Text style={styles.subtitle}>Welcome back!</Text>
+    <View className="flex-1 items-center justify-center bg-white">
+      <Text className="text-4xl font-bold mb-10 text-slate-800">MixMatch</Text>
 
-      {/* Temporary Navigation Buttons for Testing */}
-      <View style={styles.buttonContainer}>
-        <Button
-          title="Open Camera"
-          onPress={() => navigation.navigate("Camera" as never)}
-        />
-        <Button
-          title="My Wardrobe"
-          onPress={() => navigation.navigate("Closet" as never)}
-        />
-      </View>
+      <TouchableOpacity
+        className="bg-blue-600 px-8 py-4 rounded-full mb-4 w-64 items-center shadow-lg"
+        onPress={() => navigation.navigate("Camera")}
+      >
+        <Text className="text-white font-bold text-lg">📸 Add New Item</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        className="bg-slate-200 px-8 py-4 rounded-full w-64 items-center"
+        onPress={() => navigation.navigate("Wardrobe")}
+      >
+        <Text className="text-slate-800 font-bold text-lg">👕 My Closet</Text>
+      </TouchableOpacity>
     </View>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 30,
-  },
-  buttonContainer: {
-    gap: 10,
-  },
-});
-
-export default HomeScreen;
+}

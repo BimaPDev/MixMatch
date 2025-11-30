@@ -1,123 +1,75 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  Image,
-  TouchableOpacity,
-  ActivityIndicator,
-  Dimensions,
-} from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import client from "../api/client";
-import colors from "../constants/colors";
-import { ArrowRight } from "lucide-react-native";
+import { View, Text, FlatList, Image, RefreshControl } from "react-native";
+import { getWardrobe } from "../api/client";
 
-const { width } = Dimensions.get("window");
-const CARD_WIDTH = width * 0.7;
+const TEST_USER_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
 
-type WardrobeItem = {
-  id: string;
-  image_url: string;
-  category: string;
-  color: string;
+// Replace 'host.docker.internal' because Android/iOS can't read that
+// We use a regex to swap it with your local IP dynamically
+const fixUrl = (url: string): string | undefined => {
+  if (!url) return undefined;
+  return url.replace("host.docker.internal", "10.0.0.74");
 };
 
 export default function WardrobeScreen() {
-  const navigation = useNavigation();
-  const [items, setItems] = useState<WardrobeItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchWardrobe = async () => {
+  const fetchData = async () => {
+    setRefreshing(true);
     try {
-      const response = await client.get("/items");
-      setItems(response.data || []);
+      const res = await getWardrobe(TEST_USER_ID);
+      setItems(res.data);
     } catch (error) {
-      console.log("Error fetching wardrobe:", error);
+      console.error(error);
     } finally {
-      setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", fetchWardrobe);
-    return unsubscribe;
-  }, [navigation]);
+    fetchData();
+  }, []);
 
-  const getImageUrl = (path: string) => {
-    const cleanPath = path.replace(/\\/g, "/");
-    return `${client.defaults.baseURL}/${cleanPath}`;
-  };
+  const renderItem = ({ item }: { item: any }) => {
+    // Logic: Prefer the transparent AI image, fallback to original
+    const displayImage = item.processed_image_url || item.image_url;
+    const finalUrl = fixUrl(displayImage);
 
-  const renderItem = ({ item }: { item: WardrobeItem }) => (
-    <View
-      style={{ width: CARD_WIDTH }}
-      className="mr-4 bg-white rounded-3xl p-3 border-2 border-neo-dark shadow-sm"
-    >
-      <View className="flex-1 bg-gray-100 rounded-xl overflow-hidden border border-neo-dark mb-3">
-        <Image
-          source={{ uri: getImageUrl(item.image_url) }}
-          className="w-full h-full"
-          resizeMode="cover"
-        />
-      </View>
-      <View>
-        <Text className="font-black text-neo-dark text-lg capitalize">
-          {item.color} {item.category}
-        </Text>
-        <Text className="text-gray-500 font-bold text-xs">Just Added</Text>
-      </View>
-    </View>
-  );
-
-  if (loading)
     return (
-      <View className="flex-1 justify-center items-center bg-neo-background">
-        <ActivityIndicator size="large" color={colors.dark} />
-      </View>
-    );
+      <View className="flex-1 m-2 p-2 bg-white rounded-lg shadow-sm items-center">
+        <Image
+          source={{ uri: finalUrl }}
+          className="w-32 h-32 rounded-md"
+          resizeMode="contain"
+        />
+        <Text className="font-bold mt-2 capitalize">{item.category}</Text>
+        <Text className="text-xs text-gray-500">{item.processing_status}</Text>
 
-  return (
-    <View className="flex-1 bg-neo-background pt-12 pl-5">
-      <View className="flex-row justify-between items-end pr-5 mb-6">
-        <View>
-          <Text className="text-4xl font-black text-neo-dark">My</Text>
-          <Text className="text-4xl font-black text-neo-primary">Wardrobe</Text>
-        </View>
-        <TouchableOpacity
-          // @ts-ignore
-          onPress={() => navigation.navigate("Category")}
-          className="flex-row items-center bg-white px-3 py-2 rounded-full border-2 border-neo-dark"
-        >
-          <Text className="font-bold text-xs mr-1">View All</Text>
-          <ArrowRight size={14} color="black" />
-        </TouchableOpacity>
-      </View>
-
-      <View className="h-[65%]">
-        <Text className="text-lg font-bold text-gray-500 mb-4">
-          Recent Adds
-        </Text>
-        {items.length === 0 ? (
-          <View className="flex-1 justify-center items-center pr-5">
-            <Text className="text-gray-400 font-bold">Wardrobe empty!</Text>
-            <Text className="text-gray-400 text-xs">
-              Snap a photo to start.
-            </Text>
+        {/* Helper Badge for AI status */}
+        {item.processing_status === "completed" && (
+          <View className="absolute top-1 right-1 bg-green-100 px-2 py-1 rounded-full">
+            <Text className="text-green-800 text-[10px]">AI Ready</Text>
           </View>
-        ) : (
-          <FlatList
-            data={items}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={CARD_WIDTH + 16}
-            decelerationRate="fast"
-            contentContainerStyle={{ paddingRight: 20 }}
-          />
         )}
       </View>
+    );
+  };
+
+  return (
+    <View className="flex-1 bg-gray-50 pt-10 px-2">
+      <Text className="text-3xl font-bold mb-4 ml-2 text-gray-800">
+        My Closet
+      </Text>
+      <FlatList
+        data={items}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        numColumns={2}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={fetchData} />
+        }
+      />
     </View>
   );
 }

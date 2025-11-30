@@ -1,17 +1,16 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-// DELETE THIS LINE: import { NavigationContainer } from '@react-navigation/native';
 
 import HomeScreen from "../screens/HomeScreen";
 import CameraScreen from "../screens/CameraScreen";
 import WardrobeScreen from "../screens/WardrobeScreen";
-import CategoryItemsScreen from "../screens/CategoryItemsScreen"; // Ensure this exists now
+import CategoryItemsScreen from "../screens/CategoryItemsScreen";
 
 const Stack = createNativeStackNavigator();
 
 export default function Navigation() {
   return (
-    // DELETE <NavigationContainer> WRAPPER HERE
+    // ⚠️ CHANGED: No NavigationContainer here! Just the Stack.
     <Stack.Navigator initialRouteName="Home">
       <Stack.Screen
         name="Home"
@@ -21,19 +20,18 @@ export default function Navigation() {
       <Stack.Screen
         name="Camera"
         component={CameraScreen}
-        options={{ title: "Scan Item" }}
+        options={{ title: "Add Item" }}
       />
       <Stack.Screen
-        name="Closet"
+        name="Wardrobe"
         component={WardrobeScreen}
-        options={{ title: "My Wardrobe" }}
+        options={{ title: "My Closet" }}
       />
       <Stack.Screen
         name="CategoryItems"
         component={CategoryItemsScreen}
-        options={{ title: "Items" }}
+        options={({ route }: any) => ({ title: route.params.category })}
       />
     </Stack.Navigator>
-    // DELETE CLOSING </NavigationContainer> TAG HERE
   );
 }

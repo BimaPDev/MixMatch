@@ -3,7 +3,6 @@ import psycopg2
 
 class Database:
     def __init__(self):
-        # We use os.getenv to keep credentials secure and flexible
         self.host = os.getenv('DB_HOST', 'localhost')
         self.user = os.getenv('DB_USER', 'user')
         self.password = os.getenv('DB_PASS', 'password')
@@ -19,22 +18,24 @@ class Database:
             port=self.port
         )
 
-    def update_item_status(self, item_id, category, color, confidence, processed_url): # <--- Add arg
+    # CRITICAL: Definition must accept processed_url
+    def update_item_status(self, item_id, category, color, confidence, processed_url):
         try:
             conn = self.get_connection()
             cur = conn.cursor()
             
+            # CRITICAL: SQL must include processed_image_url
             query = """
                 UPDATE items 
                 SET processing_status = 'completed',
                     category = %s,
                     color = %s,
                     confidence = %s,
-                    processed_image_url = %s  -- <--- Save the new URL
+                    processed_image_url = %s
                 WHERE id = %s
             """
             
-            # Pass processed_url to the query
+            # CRITICAL: Tuple must have 5 items
             cur.execute(query, (category, color, confidence, processed_url, item_id))
             conn.commit()
             

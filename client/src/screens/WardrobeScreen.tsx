@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, Image, RefreshControl } from "react-native";
 import { getWardrobe } from "../api/client";
 
-const TEST_USER_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
 
 // Replace 'host.docker.internal' because Android/iOS can't read that
 // We use a regex to swap it with your local IP dynamically
@@ -18,7 +17,7 @@ export default function WardrobeScreen() {
   const fetchData = async () => {
     setRefreshing(true);
     try {
-      const res = await getWardrobe(TEST_USER_ID);
+      const res = await getWardrobe();
       setItems(res.data);
     } catch (error) {
       console.error(error);

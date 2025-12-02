@@ -32,10 +32,12 @@ export const uploadImage = async (formData: FormData) => {
   });
 };
 
-export const getWardrobe = async (userId: string) => {
-  // Note: In the future, you can remove userId arg and let the backend
-  // infer it from the token! But for now, we keep it compatible.
+export const getWardrobe = async () => {
   return client.get("/wardrobe");
+};
+
+export const generateShareLink = async () => {
+  return client.post("/share/generate");
 };
 
 export default client;

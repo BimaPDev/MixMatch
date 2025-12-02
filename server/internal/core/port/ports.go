@@ -2,6 +2,7 @@ package port
 
 import (
 	"context"
+	"time"
 
 	"github.com/BimaPDev/MixMatch/internal/core/domain"
 	"github.com/google/uuid"
@@ -23,4 +24,8 @@ type AIQueue interface {
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
+}
+
+type ShareRepository interface {
+	CreateShareLink(ctx context.Context, userID uuid.UUID, slug string, expiresAt time.Time) error
 }

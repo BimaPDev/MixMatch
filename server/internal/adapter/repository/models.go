@@ -5,25 +5,35 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Item struct {
-	ID                uuid.UUID          `json:"id"`
-	UserID            uuid.UUID          `json:"user_id"`
-	ImageUrl          string             `json:"image_url"`
-	Category          string             `json:"category"`
-	Color             string             `json:"color"`
-	Confidence        float64            `json:"confidence"`
-	ProcessedImageUrl pgtype.Text        `json:"processed_image_url"`
-	ProcessingStatus  string             `json:"processing_status"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	ID                uuid.UUID   `json:"id"`
+	UserID            uuid.UUID   `json:"user_id"`
+	ImageUrl          string      `json:"image_url"`
+	Category          string      `json:"category"`
+	Color             string      `json:"color"`
+	Confidence        float64     `json:"confidence"`
+	ProcessedImageUrl pgtype.Text `json:"processed_image_url"`
+	ProcessingStatus  string      `json:"processing_status"`
+	CreatedAt         time.Time   `json:"created_at"`
+}
+
+type SharedWardrobe struct {
+	ID        int32              `json:"id"`
+	UserID    uuid.UUID          `json:"user_id"`
+	Slug      string             `json:"slug"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type User struct {
-	ID           uuid.UUID          `json:"id"`
-	Email        string             `json:"email"`
-	PasswordHash string             `json:"password_hash"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ID           uuid.UUID `json:"id"`
+	Email        string    `json:"email"`
+	PasswordHash string    `json:"password_hash"`
+	CreatedAt    time.Time `json:"created_at"`
 }

@@ -46,6 +46,9 @@ func NewServer() *Server {
 	clothingHandler := handler.NewClothingHandler(clothingService)
 	authHandler := handler.NewAuthHandler(authService)
 
+	shareService := service.NewShareService(repoAdapter)
+	shareHandler := handler.NewShareHandler(shareService)
+
 	// 4. Setup Router
 	r := gin.Default()
 	r.Static("/static", "./uploads")
@@ -61,6 +64,7 @@ func NewServer() *Server {
 		protected.POST("/upload", clothingHandler.UploadItem)
 		protected.GET("/wardrobe", clothingHandler.GetWardrobe)
 	}
+	protected.POST("/share/generate", shareHandler.GenerateLink)
 
 	return &Server{
 		router: r,

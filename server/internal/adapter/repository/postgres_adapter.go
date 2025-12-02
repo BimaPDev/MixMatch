@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/BimaPDev/MixMatch/internal/core/domain"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -52,7 +54,7 @@ func (a *PostgresAdapter) ListItemsByUser(ctx context.Context, userID uuid.UUID)
 			ProcessedImageURL: dbItem.ProcessedImageUrl.String,
 			Category:          dbItem.Category,
 			ProcessingStatus:  dbItem.ProcessingStatus,
-			CreatedAt:         dbItem.CreatedAt.Time,
+			CreatedAt:         dbItem.CreatedAt,
 		}
 	}
 
@@ -74,7 +76,7 @@ func (a *PostgresAdapter) GetItem(ctx context.Context, id uuid.UUID) (*domain.Cl
 		ImageURL:         dbItem.ImageUrl, // Note: Check if sqlc generated ImageUrl or ImageURL
 		Category:         dbItem.Category,
 		ProcessingStatus: dbItem.ProcessingStatus,
-		CreatedAt:        dbItem.CreatedAt.Time,
+		CreatedAt:        dbItem.CreatedAt,
 	}, nil
 }
 
@@ -105,4 +107,16 @@ func (a *PostgresAdapter) GetUserByEmail(ctx context.Context, email string) (*do
 		Email:        dbUser.Email,
 		PasswordHash: dbUser.PasswordHash,
 	}, nil
+}
+
+func (a *PostgresAdapter) CreateShareLink(ctx context.Context, userID uuid.UUID, slug string, expiresAt time.Time) error {
+	params := CreateShareLinkParams{
+		UserID:    userID,
+		Slug:      slug,
+		ExpiresAt: pgtype.Timestamptz{Time: expiresAt, Valid: true}, // This line is now valid!
+	}
+
+	// Note: The SQL returns a row, so use QueryRow or ignore the return if you just want error
+	_, err := a.q.CreateShareLink(ctx, params)
+	return err
 }

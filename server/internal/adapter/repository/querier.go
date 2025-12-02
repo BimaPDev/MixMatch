@@ -13,9 +13,11 @@ import (
 type Querier interface {
 	CreateClothingItem(ctx context.Context, arg CreateClothingItemParams) (Item, error)
 	CreateItem(ctx context.Context, arg CreateItemParams) (Item, error)
+	CreateShareLink(ctx context.Context, arg CreateShareLinkParams) (SharedWardrobe, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	GetClothingItem(ctx context.Context, id uuid.UUID) (Item, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserBySlug(ctx context.Context, slug string) (uuid.UUID, error)
 	ListClothingByUser(ctx context.Context, userID uuid.UUID) ([]Item, error)
 	UpdateClothingStatus(ctx context.Context, arg UpdateClothingStatusParams) error
 }

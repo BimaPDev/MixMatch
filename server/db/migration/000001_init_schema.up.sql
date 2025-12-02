@@ -19,3 +19,11 @@ CREATE TABLE items (
   
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE shared_wardrobes (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id),
+    slug VARCHAR(10) NOT NULL UNIQUE, -- The short code e.g. "xY8z2A"
+    expires_at TIMESTAMPTZ,           -- Optional: Link dies after 24 hours
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);

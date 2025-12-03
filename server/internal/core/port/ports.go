@@ -29,3 +29,8 @@ type UserRepository interface {
 type ShareRepository interface {
 	CreateShareLink(ctx context.Context, userID uuid.UUID, slug string, expiresAt time.Time) error
 }
+
+type TripRepository interface {
+	CreateTrip(ctx context.Context, trip *domain.Trip) error
+	ListTrips(ctx context.Context, userID uuid.UUID) ([]*domain.Trip, error)
+}

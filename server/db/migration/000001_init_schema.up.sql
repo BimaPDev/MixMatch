@@ -27,3 +27,12 @@ CREATE TABLE shared_wardrobes (
     expires_at TIMESTAMPTZ,           -- Optional: Link dies after 24 hours
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE trips (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id),
+    name VARCHAR(100) NOT NULL,
+    start_date TIMESTAMPTZ NOT NULL,
+    end_date TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);

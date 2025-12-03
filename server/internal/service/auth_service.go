@@ -92,4 +92,4 @@ func (h *AuthService) ValidateToken(tokenString string) (uuid.UUID, error) {
 		return uuid.Parse(userIDStr)
 	}
 	return uuid.Nil, errors.New("Invalid Token")
-}
+} 

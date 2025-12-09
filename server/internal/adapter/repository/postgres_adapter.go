@@ -123,27 +123,35 @@ func (a *PostgresAdapter) CreateShareLink(ctx context.Context, userID uuid.UUID,
 
 // Trip Adapter
 func (a *PostgresAdapter) CreateTrip(ctx context.Context, trip *domain.Trip) error {
-    params := CreateTripParams{
-        ID:        trip.ID,
-        UserID:    trip.UserID,
-        Name:      trip.Name,
-        StartDate: trip.StartDate,
-        EndDate:   trip.EndDate,
-    }
-    _, err := a.q.CreateTrip(ctx, params)
-    return err
+	params := CreateTripParams{
+		ID:        trip.ID,
+		UserID:    trip.UserID,
+		Name:      trip.Name,
+		StartDate: trip.StartDate,
+		EndDate:   trip.EndDate,
+	}
+	_, err := a.q.CreateTrip(ctx, params)
+	return err
 }
 
 // Trip List
-func (a *PostgresAdapter) listTrips(ctx context.Context, userID uuid.UUID) ([]*domain.Trip, error) {
-	dbTrips, err := a.q.ListTrips(ctx. UserID)
-	if err != nil{
+// ListTrips retrieves trips for a user
+func (a *PostgresAdapter) ListTrips(ctx context.Context, userID uuid.UUID) ([]*domain.Trip, error) {
+	dbTrips, err := a.q.ListTrips(ctx, userID)
+	if err != nil {
 		return nil, err
 	}
 
 	domainTrips := make([]*domain.Trip, len(dbTrips))
-
-	for i, dbTrip := range dbTrips() {
-		
+	for i, dbTrip := range dbTrips {
+		domainTrips[i] = &domain.Trip{
+			ID:        dbTrip.ID,
+			UserID:    dbTrip.UserID,
+			Name:      dbTrip.Name,
+			StartDate: dbTrip.StartDate,
+			EndDate:   dbTrip.EndDate,
+			CreatedAt: dbTrip.CreatedAt.Time,
+		}
 	}
+	return domainTrips, nil
 }
